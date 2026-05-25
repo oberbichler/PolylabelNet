@@ -1,5 +1,3 @@
-using System;
-
 namespace Polylabel;
 
 /// <summary>
@@ -11,7 +9,7 @@ public readonly struct Polygon<TPoint> : IPolygon<TPoint> where TPoint : struct,
 {
     public TPoint[][] Rings { get; }
 
-    public int RingCount => Rings.Length;
+    public int RingCount => Rings?.Length ?? 0;
 
     public ReadOnlySpan<TPoint> GetRing(int index) => Rings[index];
 
@@ -25,7 +23,7 @@ public readonly struct Polygon : IPolygon<Point>
 {
     public Point[][] Rings { get; }
 
-    public int RingCount => Rings.Length;
+    public int RingCount => Rings?.Length ?? 0;
 
     public ReadOnlySpan<Point> GetRing(int index) => Rings[index];
 
