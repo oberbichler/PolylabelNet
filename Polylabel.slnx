@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Polylabel/Polylabel.csproj" />
+  <Project Path="Polylabel.Tests/Polylabel.Tests.csproj" />
+  <Project Path="Polylabel.Benchmarks/Polylabel.Benchmarks.csproj" />
+</Solution>
