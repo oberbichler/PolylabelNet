@@ -47,6 +47,15 @@ public static class Polylabel
         where TPolygon : struct, IPolygon<TPoint>
         where TPoint : struct, IPoint
     {
+        return RunCore<TPolygon, TPoint, NativeCellQueue>(polygon, new NativeCellQueue(), precision, debug);
+    }
+
+    internal static PolylabelResult RunCore<TPolygon, TPoint, TCellQueue>(
+        TPolygon polygon, TCellQueue cellQueue, double precision, bool debug)
+        where TPolygon : struct, IPolygon<TPoint>
+        where TPoint : struct, IPoint
+        where TCellQueue : struct, ICellQueue
+    {
         int ringCount = polygon.RingCount;
         if (ringCount == 0)
         {
@@ -83,13 +92,10 @@ public static class Polylabel
             return new PolylabelResult(new Point(minX, minY), 0);
         }
 
-        // 2. Setup priority queue of cells (Max-Heap using custom MaxDoubleComparer)
-        var cellQueue = new PriorityQueue<Cell, double>(new MaxDoubleComparer());
-
-        // 3. Take centroid as the first best guess
+        // 2. Take centroid as the first best guess
         Cell bestCell = GetCentroidCell<TPolygon, TPoint>(polygon);
 
-        // 4. Second guess: bounding box centroid
+        // 3. Second guess: bounding box centroid
         Cell bboxCell = CreateCell<TPolygon, TPoint>(minX + width / 2.0, minY + height / 2.0, 0, polygon);
         if (bboxCell.D > bestCell.D)
         {
@@ -98,17 +104,17 @@ public static class Polylabel
 
         int numProbes = 2;
 
-        // 5. Cover polygon with initial cells
+        // 4. Cover polygon with initial cells
         double initialH = cellSize / 2.0;
         for (double x = minX; x < maxX; x += cellSize)
         {
             for (double y = minY; y < maxY; y += cellSize)
             {
-                PotentiallyQueue<TPolygon, TPoint>(x + initialH, y + initialH, initialH, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+                PotentiallyQueue<TPolygon, TPoint, TCellQueue>(x + initialH, y + initialH, initialH, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
             }
         }
 
-        // 6. Main queue processing loop
+        // 5. Main queue processing loop
         while (cellQueue.Count > 0)
         {
             Cell cell = cellQueue.Dequeue();
@@ -121,10 +127,10 @@ public static class Polylabel
 
             // Split the cell into four child cells
             double h = cell.H / 2.0;
-            PotentiallyQueue<TPolygon, TPoint>(cell.X - h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
-            PotentiallyQueue<TPolygon, TPoint>(cell.X + h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
-            PotentiallyQueue<TPolygon, TPoint>(cell.X - h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
-            PotentiallyQueue<TPolygon, TPoint>(cell.X + h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X - h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X + h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X - h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X + h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
         }
 
         if (debug)
@@ -136,22 +142,23 @@ public static class Polylabel
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PotentiallyQueue<TPolygon, TPoint>(
+    private static void PotentiallyQueue<TPolygon, TPoint, TCellQueue>(
         double x, double y, double h,
         TPolygon polygon,
         ref int numProbes,
         ref Cell bestCell,
-        PriorityQueue<Cell, double> cellQueue,
+        TCellQueue cellQueue,
         double precision,
         bool debug)
         where TPolygon : struct, IPolygon<TPoint>
         where TPoint : struct, IPoint
+        where TCellQueue : struct, ICellQueue
     {
         Cell cell = CreateCell<TPolygon, TPoint>(x, y, h, polygon);
         numProbes++;
         if (cell.Max > bestCell.D + precision)
         {
-            cellQueue.Enqueue(cell, cell.Max);
+            cellQueue.Enqueue(cell);
         }
 
         if (cell.D > bestCell.D)
