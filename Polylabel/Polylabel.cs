@@ -7,20 +7,55 @@ namespace Polylabel;
 public static class Polylabel
 {
     /// <summary>
-    /// Finds the pole of inaccessibility for the given polygon with the specified precision.
+    /// Finds the pole of inaccessibility for the given standard polygon with the specified precision.
     /// </summary>
-    /// <param name="polygon">The polygon coordinates.</param>
+    /// <param name="polygon">The standard polygon coordinates.</param>
     /// <param name="precision">The search precision (default is 1.0).</param>
     /// <param name="debug">Whether to write debug probe information to the Console (default is false).</param>
     /// <returns>A PolylabelResult containing the found pole and its distance to the outline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PolylabelResult Run(Polygon polygon, double precision = 1.0, bool debug = false)
     {
-        if (polygon.Rings == null || polygon.Rings.Length == 0)
+        return Run<Polygon, Point>(polygon, precision, debug);
+    }
+
+    /// <summary>
+    /// Finds the pole of inaccessibility for the given generic polygon with the specified precision.
+    /// Supports any point type implementing the IPoint interface with zero runtime overhead.
+    /// </summary>
+    /// <typeparam name="TPoint">The type of the point, which must be a struct implementing IPoint.</typeparam>
+    /// <param name="polygon">The generic polygon coordinates.</param>
+    /// <param name="precision">The search precision (default is 1.0).</param>
+    /// <param name="debug">Whether to write debug probe information to the Console (default is false).</param>
+    /// <returns>A PolylabelResult containing the found pole and its distance to the outline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static PolylabelResult Run<TPoint>(Polygon<TPoint> polygon, double precision = 1.0, bool debug = false)
+        where TPoint : struct, IPoint
+    {
+        return Run<Polygon<TPoint>, TPoint>(polygon, precision, debug);
+    }
+
+    /// <summary>
+    /// Finds the pole of inaccessibility for any custom polygon implementation with the specified precision.
+    /// Supports completely custom third-party polygon types (e.g. NetTopologySuite) with zero runtime overhead.
+    /// </summary>
+    /// <typeparam name="TPolygon">The type of the polygon, which must be a struct implementing IPolygon&lt;TPoint&gt;.</typeparam>
+    /// <typeparam name="TPoint">The type of the point, which must be a struct implementing IPoint.</typeparam>
+    /// <param name="polygon">The custom polygon coordinates.</param>
+    /// <param name="precision">The search precision (default is 1.0).</param>
+    /// <param name="debug">Whether to write debug probe information to the Console (default is false).</param>
+    /// <returns>A PolylabelResult containing the found pole and its distance to the outline.</returns>
+    public static PolylabelResult Run<TPolygon, TPoint>(TPolygon polygon, double precision = 1.0, bool debug = false)
+        where TPolygon : struct, IPolygon<TPoint>
+        where TPoint : struct, IPoint
+    {
+        int ringCount = polygon.RingCount;
+        if (ringCount == 0)
         {
             return new PolylabelResult(new Point(0, 0), 0);
         }
 
-        ReadOnlySpan<Point> outerRing = polygon.Rings[0];
+        ReadOnlySpan<TPoint> outerRing = polygon.GetRing(0);
         if (outerRing.Length == 0)
         {
             return new PolylabelResult(new Point(0, 0), 0);
@@ -34,7 +69,7 @@ public static class Polylabel
 
         for (int i = 0; i < outerRing.Length; i++)
         {
-            Point p = outerRing[i];
+            TPoint p = outerRing[i];
             if (p.X < minX) minX = p.X;
             if (p.Y < minY) minY = p.Y;
             if (p.X > maxX) maxX = p.X;
@@ -54,10 +89,10 @@ public static class Polylabel
         var cellQueue = new PriorityQueue<Cell, double>(new MaxDoubleComparer());
 
         // 3. Take centroid as the first best guess
-        Cell bestCell = GetCentroidCell(polygon);
+        Cell bestCell = GetCentroidCell<TPolygon, TPoint>(polygon);
 
         // 4. Second guess: bounding box centroid
-        Cell bboxCell = CreateCell(minX + width / 2.0, minY + height / 2.0, 0, polygon);
+        Cell bboxCell = CreateCell<TPolygon, TPoint>(minX + width / 2.0, minY + height / 2.0, 0, polygon);
         if (bboxCell.D > bestCell.D)
         {
             bestCell = bboxCell;
@@ -71,7 +106,7 @@ public static class Polylabel
         {
             for (double y = minY; y < maxY; y += cellSize)
             {
-                PotentiallyQueue(x + initialH, y + initialH, initialH, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+                PotentiallyQueue<TPolygon, TPoint>(x + initialH, y + initialH, initialH, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
             }
         }
 
@@ -88,10 +123,10 @@ public static class Polylabel
 
             // Split the cell into four child cells
             double h = cell.H / 2.0;
-            PotentiallyQueue(cell.X - h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
-            PotentiallyQueue(cell.X + h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
-            PotentiallyQueue(cell.X - h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
-            PotentiallyQueue(cell.X + h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint>(cell.X - h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint>(cell.X + h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint>(cell.X - h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
+            PotentiallyQueue<TPolygon, TPoint>(cell.X + h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, debug);
         }
 
         if (debug)
@@ -103,16 +138,18 @@ public static class Polylabel
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PotentiallyQueue(
+    private static void PotentiallyQueue<TPolygon, TPoint>(
         double x, double y, double h,
-        Polygon polygon,
+        TPolygon polygon,
         ref int numProbes,
         ref Cell bestCell,
         PriorityQueue<Cell, double> cellQueue,
         double precision,
         bool debug)
+        where TPolygon : struct, IPolygon<TPoint>
+        where TPoint : struct, IPoint
     {
-        Cell cell = CreateCell(x, y, h, polygon);
+        Cell cell = CreateCell<TPolygon, TPoint>(x, y, h, polygon);
         numProbes++;
         if (cell.Max > bestCell.D + precision)
         {
@@ -130,26 +167,30 @@ public static class Polylabel
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Cell CreateCell(double x, double y, double h, Polygon polygon)
+    private static Cell CreateCell<TPolygon, TPoint>(double x, double y, double h, TPolygon polygon)
+        where TPolygon : struct, IPolygon<TPoint>
+        where TPoint : struct, IPoint
     {
-        double d = PointToPolygonDist(x, y, polygon);
+        double d = PointToPolygonDist<TPolygon, TPoint>(x, y, polygon);
         return new Cell(x, y, h, d);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Cell GetCentroidCell(Polygon polygon)
+    private static Cell GetCentroidCell<TPolygon, TPoint>(TPolygon polygon)
+        where TPolygon : struct, IPolygon<TPoint>
+        where TPoint : struct, IPoint
     {
         double area = 0;
         double x = 0;
         double y = 0;
-        ReadOnlySpan<Point> points = polygon.Rings[0];
+        ReadOnlySpan<TPoint> points = polygon.GetRing(0);
         int len = points.Length;
         if (len == 0) return new Cell(0, 0, 0, 0);
 
-        Point b = points[len - 1];
+        TPoint b = points[len - 1];
         for (int i = 0; i < len; i++)
         {
-            Point a = points[i];
+            TPoint a = points[i];
             double f = a.X * b.Y - b.X * a.Y;
             x += (a.X + b.X) * f;
             y += (a.Y + b.Y) * f;
@@ -159,38 +200,41 @@ public static class Polylabel
 
         if (area == 0)
         {
-            Point first = points[0];
-            return CreateCell(first.X, first.Y, 0, polygon);
+            TPoint first = points[0];
+            return CreateCell<TPolygon, TPoint>(first.X, first.Y, 0, polygon);
         }
 
         double cx = x / area;
         double cy = y / area;
-        Cell centroid = CreateCell(cx, cy, 0, polygon);
+        Cell centroid = CreateCell<TPolygon, TPoint>(cx, cy, 0, polygon);
         if (centroid.D < 0)
         {
-            Point first = points[0];
-            return CreateCell(first.X, first.Y, 0, polygon);
+            TPoint first = points[0];
+            return CreateCell<TPolygon, TPoint>(first.X, first.Y, 0, polygon);
         }
 
         return centroid;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static double PointToPolygonDist(double x, double y, Polygon polygon)
+    private static double PointToPolygonDist<TPolygon, TPoint>(double x, double y, TPolygon polygon)
+        where TPolygon : struct, IPolygon<TPoint>
+        where TPoint : struct, IPoint
     {
         bool inside = false;
         double minDistSq = double.PositiveInfinity;
 
-        for (int r = 0; r < polygon.Rings.Length; r++)
+        int ringCount = polygon.RingCount;
+        for (int r = 0; r < ringCount; r++)
         {
-            ReadOnlySpan<Point> ring = polygon.Rings[r];
+            ReadOnlySpan<TPoint> ring = polygon.GetRing(r);
             int len = ring.Length;
             if (len == 0) continue;
 
-            Point b = ring[len - 1];
+            TPoint b = ring[len - 1];
             for (int i = 0; i < len; i++)
             {
-                Point a = ring[i];
+                TPoint a = ring[i];
 
                 if ((a.Y > y) != (b.Y > y) &&
                     (x < (b.X - a.X) * (y - a.Y) / (b.Y - a.Y) + a.X))
@@ -212,7 +256,8 @@ public static class Polylabel
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static double GetSegDistSq(double px, double py, in Point a, in Point b)
+    private static double GetSegDistSq<TPoint>(double px, double py, in TPoint a, in TPoint b)
+        where TPoint : struct, IPoint
     {
         double x = a.X;
         double y = a.Y;

@@ -3,7 +3,7 @@ namespace Polylabel;
 /// <summary>
 /// Represents a 2D point with double-precision coordinates.
 /// </summary>
-public readonly struct Point
+public readonly struct Point : IPoint
 {
     public double X { get; }
     public double Y { get; }

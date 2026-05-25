@@ -13,7 +13,7 @@ public class PolylabelTests
     {
         string fullPath = Path.Combine(AppContext.BaseDirectory, "fixtures", filename);
         string json = File.ReadAllText(fullPath);
-        double[][][] coords = JsonSerializer.Deserialize<double[][][]>(json) 
+        double[][][] coords = JsonSerializer.Deserialize<double[][][]>(json)
             ?? throw new Exception($"Failed to deserialize {filename}");
         return new Polygon(coords);
     }
@@ -71,6 +71,146 @@ public class PolylabelTests
         Assert.Equal(0, distance2);
     }
 
+    private readonly struct CustomVector2 : IPoint
+    {
+        public double X => XCoord;
+        public double Y => YCoord;
+
+        public double XCoord { get; }
+        public double YCoord { get; }
+
+        public CustomVector2(double x, double y)
+        {
+            XCoord = x;
+            YCoord = y;
+        }
+    }
+
+    [Fact]
+    public void WorksWithCustomPointType()
+    {
+        var rings = new CustomVector2[][]
+        {
+            new CustomVector2[]
+            {
+                new CustomVector2(0, 0),
+                new CustomVector2(10, 0),
+                new CustomVector2(10, 10),
+                new CustomVector2(0, 10),
+                new CustomVector2(0, 0)
+            }
+        };
+
+        var polygon = new Polygon<CustomVector2>(rings);
+        var (point, distance) = Polylabel.Run(polygon, 1.0);
+
+        Assert.Equal(5.0, point.X);
+        Assert.Equal(5.0, point.Y);
+        Assert.Equal(5.0, distance);
+    }
+
+    private readonly struct Vector2Adapter : IPoint
+    {
+        private readonly System.Numerics.Vector2 _vector;
+
+        public double X => _vector.X;
+        public double Y => _vector.Y;
+
+        public Vector2Adapter(System.Numerics.Vector2 vector) => _vector = vector;
+    }
+
+    [Fact]
+    public void WorksWithExternalVector2()
+    {
+        var rings = new System.Numerics.Vector2[][]
+        {
+            new System.Numerics.Vector2[]
+            {
+                new System.Numerics.Vector2(0, 0),
+                new System.Numerics.Vector2(10, 0),
+                new System.Numerics.Vector2(10, 10),
+                new System.Numerics.Vector2(0, 10),
+                new System.Numerics.Vector2(0, 0)
+            }
+        };
+
+        var wrappedRings = Array.ConvertAll(rings,
+            ring => Array.ConvertAll(ring, v => new Vector2Adapter(v)));
+
+        var polygon = new Polygon<Vector2Adapter>(wrappedRings);
+        var (point, distance) = Polylabel.Run(polygon, 1.0);
+
+        Assert.Equal(5.0, point.X);
+        Assert.Equal(5.0, point.Y);
+        Assert.Equal(5.0, distance);
+    }
+
+    private readonly struct CustomPolygon : IPolygon<Point>
+    {
+        private readonly Point[] _outerRing;
+
+        public int RingCount => 1;
+
+        public ReadOnlySpan<Point> GetRing(int index) => index == 0 ? _outerRing : ReadOnlySpan<Point>.Empty;
+
+        public CustomPolygon(Point[] outerRing) => _outerRing = outerRing;
+    }
+
+    [Fact]
+    public void WorksWithCustomPolygonType()
+    {
+        var outerRing = new Point[]
+        {
+            new Point(0, 0),
+            new Point(10, 0),
+            new Point(10, 10),
+            new Point(0, 10),
+            new Point(0, 0)
+        };
+
+        var polygon = new CustomPolygon(outerRing);
+        var (point, distance) = Polylabel.Run<CustomPolygon, Point>(polygon, 1.0);
+
+        Assert.Equal(5.0, point.X);
+        Assert.Equal(5.0, point.Y);
+        Assert.Equal(5.0, distance);
+    }
+
+    [Fact]
+    public void CalculateSvgPolygonResult()
+    {
+        var outerRing = new Point[]
+        {
+            new Point(15, 15),
+            new Point(135, 15),
+            new Point(135, 135),
+            new Point(15, 135),
+            new Point(15, 15)
+        };
+        var holeA = new Point[]
+        {
+            new Point(85, 35),
+            new Point(125, 35),
+            new Point(125, 85),
+            new Point(85, 35)
+        };
+        var holeB = new Point[]
+        {
+            new Point(25, 80),
+            new Point(55, 80),
+            new Point(55, 125),
+            new Point(25, 125),
+            new Point(25, 80)
+        };
+
+        var polygon = new Polygon(new Point[][] { outerRing, holeA, holeB });
+        var (point, distance) = Polylabel.Run(polygon, 0.01);
+        
+        Assert.Equal(90.7, point.X, 1);
+        Assert.Equal(99.3, point.Y, 1);
+        Assert.Equal(35.7, distance, 1);
+    }
+
     [Fact]
     public void GenerateVisualResultSVGs()
     {
@@ -78,7 +218,7 @@ public class PolylabelTests
         string testProjectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
         string workspaceRoot = Path.GetFullPath(Path.Combine(testProjectDir, ".."));
         string imagesDir = Path.Combine(workspaceRoot, "images");
-        
+
         Directory.CreateDirectory(imagesDir);
 
         GenerateSVG("water1.json", Path.Combine(imagesDir, "water1.svg"));
@@ -89,7 +229,7 @@ public class PolylabelTests
     {
         var polygon = LoadFixture(filename);
         var result = Polylabel.Run(polygon, 1.0);
-        
+
         // 1. Calculate Centroid locally
         double area = 0;
         double cx = 0;

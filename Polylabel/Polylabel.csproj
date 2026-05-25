@@ -4,12 +4,21 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Authors>Thomas Oberbichler</Authors>
     <Company>Thomas Oberbichler</Company>
     <Copyright>Copyright © 2026 Thomas Oberbichler</Copyright>
     <Description>A blazing fast, zero-allocation C# port of Mapbox Polylabel for finding the pole of inaccessibility of a polygon.</Description>
     <PackageLicenseExpression>ISC</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/oberbichler/PolylabelNet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>mapbox;polylabel;polygon;pole-of-inaccessibility;label-placement;geometry;gis;dotnet;zero-allocation</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
