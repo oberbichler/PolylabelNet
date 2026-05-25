@@ -1,0 +1,11 @@
+<svg width="150" height="150" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Beautiful geometric concave polygon representing GIS mapping -->
+  <path d="M15 45L40 15L85 30L55 50L75 75L35 85L15 45Z" fill="#1b1f23" fill-opacity="0.05" stroke="#087F5B" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M15 45L40 15L85 30L55 50L75 75L35 85L15 45Z" stroke="#087F5B" stroke-width="3" stroke-linejoin="round" stroke-dasharray="1 3"/>
+  <!-- The Pole of Inaccessibility (optimal placement) -->
+  <circle cx="38" cy="48" r="4" fill="#E03131"/>
+  <circle cx="38" cy="48" r="17" stroke="#E03131" stroke-width="1.5" stroke-dasharray="2 2"/>
+  <!-- Concentric grid lines indicating search cells -->
+  <rect x="28" y="38" width="20" height="20" stroke="#228BE6" stroke-width="0.75" stroke-dasharray="1 1"/>
+  <rect x="18" y="28" width="40" height="40" stroke="#228BE6" stroke-width="0.5" stroke-dasharray="1 1"/>
+</svg>
