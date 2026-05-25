@@ -24,9 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="fixtures\**">
+    <Content Include="..\fixtures\**" Link="fixtures\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 
 </Project>
