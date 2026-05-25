@@ -71,6 +71,62 @@ public class PolylabelTests
         Assert.Equal(0, distance2);
     }
 
+    [Fact]
+    public void ReturnsZeroForDefaultPolygonStruct()
+    {
+        Polygon polygon = default;
+        var (point, distance) = Polylabel.Run(polygon);
+
+        Assert.Equal(0, point.X);
+        Assert.Equal(0, point.Y);
+        Assert.Equal(0, distance);
+    }
+
+    [Fact]
+    public void ReturnsZeroForDefaultGenericPolygonStruct()
+    {
+        Polygon<Point> polygon = default;
+        var (point, distance) = Polylabel.Run(polygon);
+
+        Assert.Equal(0, point.X);
+        Assert.Equal(0, point.Y);
+        Assert.Equal(0, distance);
+    }
+
+    [Fact]
+    public void ReturnsZeroForEmptyPolygon()
+    {
+        var polygon = new Polygon(Array.Empty<Point[]>());
+        var (point, distance) = Polylabel.Run(polygon);
+
+        Assert.Equal(0, point.X);
+        Assert.Equal(0, point.Y);
+        Assert.Equal(0, distance);
+    }
+
+    [Fact]
+    public void ReturnsZeroForPolygonWithEmptyOuterRing()
+    {
+        var polygon = new Polygon(new Point[][] { Array.Empty<Point>() });
+        var (point, distance) = Polylabel.Run(polygon);
+
+        Assert.Equal(0, point.X);
+        Assert.Equal(0, point.Y);
+        Assert.Equal(0, distance);
+    }
+
+    [Fact]
+    public void ReturnsZeroForSinglePointPolygon()
+    {
+        var coords = new double[][][] { new double[][] { new double[] { 5, 7 } } };
+        var polygon = new Polygon(coords);
+        var (point, distance) = Polylabel.Run(polygon);
+
+        Assert.Equal(5, point.X);
+        Assert.Equal(7, point.Y);
+        Assert.Equal(0, distance);
+    }
+
     private readonly struct CustomVector2 : IPoint
     {
         public double X => XCoord;
