@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Authors>Thomas Oberbichler</Authors>
     <Company>Thomas Oberbichler</Company>
     <Copyright>Copyright © 2026 Thomas Oberbichler</Copyright>

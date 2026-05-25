@@ -2,6 +2,9 @@ using System.Runtime.CompilerServices;
 
 namespace Polylabel;
 
+/// <summary>
+/// Provides methods for finding the pole of inaccessibility of a polygon.
+/// </summary>
 public static class Polylabel
 {
     /// <summary>

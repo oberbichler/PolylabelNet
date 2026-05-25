@@ -5,6 +5,9 @@ namespace Polylabel;
 /// </summary>
 public interface IPoint
 {
+    /// <summary>The X coordinate.</summary>
     double X { get; }
+
+    /// <summary>The Y coordinate.</summary>
     double Y { get; }
 }

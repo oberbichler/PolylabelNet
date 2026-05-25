@@ -7,12 +7,16 @@ namespace Polylabel;
 /// <typeparam name="TPoint">The type of point, which must implement IPoint.</typeparam>
 public readonly struct Polygon<TPoint> : IPolygon<TPoint> where TPoint : struct, IPoint
 {
+    /// <summary>The rings of the polygon (outer boundary at index 0, followed by holes).</summary>
     public TPoint[][] Rings { get; }
 
+    /// <inheritdoc />
     public int RingCount => Rings?.Length ?? 0;
 
+    /// <inheritdoc />
     public ReadOnlySpan<TPoint> GetRing(int index) => Rings[index];
 
+    /// <summary>Creates a new polygon from the specified rings.</summary>
     public Polygon(TPoint[][] rings) => Rings = rings ?? throw new ArgumentNullException(nameof(rings));
 }
 
@@ -21,14 +25,19 @@ public readonly struct Polygon<TPoint> : IPolygon<TPoint> where TPoint : struct,
 /// </summary>
 public readonly struct Polygon : IPolygon<Point>
 {
+    /// <summary>The rings of the polygon (outer boundary at index 0, followed by holes).</summary>
     public Point[][] Rings { get; }
 
+    /// <inheritdoc />
     public int RingCount => Rings?.Length ?? 0;
 
+    /// <inheritdoc />
     public ReadOnlySpan<Point> GetRing(int index) => Rings[index];
 
+    /// <summary>Creates a new polygon from the specified rings.</summary>
     public Polygon(Point[][] rings) => Rings = rings ?? throw new ArgumentNullException(nameof(rings));
 
+    /// <summary>Creates a new polygon from GeoJSON-style double coordinates.</summary>
     public Polygon(double[][][] coordinates)
     {
         if (coordinates == null) throw new ArgumentNullException(nameof(coordinates));
