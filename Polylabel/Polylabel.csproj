@@ -11,4 +11,13 @@
     <PackageLicenseExpression>ISC</PackageLicenseExpression>
   </PropertyGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Polylabel.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Polylabel.Benchmarks</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>

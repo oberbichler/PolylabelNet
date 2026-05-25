@@ -28,21 +28,27 @@ public class PolylabelBenchmarks
         return new Polygon(coords);
     }
 
-    [Benchmark]
-    public PolylabelResult Water1_Precision1()
+    [Benchmark(Baseline = true)]
+    public PolylabelResult NativeQueue_Water1_Precision1()
     {
         return Polylabel.Run(_water1, 1.0);
     }
 
     [Benchmark]
-    public PolylabelResult Water1_Precision50()
+    public PolylabelResult Tinyqueue_Water1_Precision1()
     {
-        return Polylabel.Run(_water1, 50.0);
+        return PolylabelTinyqueue.Run(_water1, 1.0);
     }
 
     [Benchmark]
-    public PolylabelResult Water2_Precision1()
+    public PolylabelResult NativeQueue_Water2_Precision1()
     {
         return Polylabel.Run(_water2, 1.0);
+    }
+
+    [Benchmark]
+    public PolylabelResult Tinyqueue_Water2_Precision1()
+    {
+        return PolylabelTinyqueue.Run(_water2, 1.0);
     }
 }

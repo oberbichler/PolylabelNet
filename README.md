@@ -76,11 +76,24 @@ Executed on an **Apple M1 Pro** under **.NET 10.0**:
 
 | Benchmark Case | Polygon Complexity | Search Precision | Mean Execution Time | Allocated Memory | Calculated Pole (Result) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`Water1` (GIS Dataset)** | 25 Rings, 3,073 Vertices | `1.0` | **8.17 ms** | **6.00 KB** | `[3865.85, 2124.88]` (dist: 288.85) |
+| **`Water1` (GIS Dataset)** | 25 Rings, 3,073 Vertices | `1.0` | **7.77 ms** | **6.00 KB** | `[3865.85, 2124.88]` (dist: 288.85) |
 | **`Water1` (Quick Search)**| 25 Rings, 3,073 Vertices | `50.0` | **5.29 ms** | **2.98 KB** | `[3854.30, 2123.83]` (dist: 278.58) |
-| **`Water2` (GIS Dataset)** | 28 Rings, 2,831 Vertices | `1.0` | **3.08 ms** | **1.45 KB** | `[3263.50, 3263.50]` (dist: 960.50) |
+| **`Water2` (GIS Dataset)** | 28 Rings, 2,831 Vertices | `1.0` | **3.34 ms** | **1.45 KB** | `[3263.50, 3263.50]` (dist: 960.50) |
 
 *Note: The minimal memory allocated is solely for the initial creation of the priority queue object wrapper and its internal resize buffer. The main search loop operates entirely on the stack and incurs **zero garbage collection pauses**.*
+
+### Native PriorityQueue vs Tinyqueue Comparison
+
+We compare our library's native .NET `PriorityQueue` against a C# port of the original JavaScript `tinyqueue` package:
+
+| Queue Implementation | Dataset | Mean Execution Time | Allocated Memory |
+| :--- | :--- | :--- | :--- |
+| **Native `PriorityQueue`** | `Water1` (25 Rings, 3,073 Vertices) | 7.77 ms | 6.00 KB |
+| **Tinyqueue (JS Port)** | `Water1` (25 Rings, 3,073 Vertices) | **7.75 ms** | **5.02 KB** |
+| **Native `PriorityQueue`** | `Water2` (28 Rings, 2,831 Vertices) | **3.34 ms** | **1.45 KB** |
+| **Tinyqueue (JS Port)** | `Water2` (28 Rings, 2,831 Vertices) | 3.56 ms | 2.50 KB |
+
+Both implementations are roughly equally fast.
 
 ### Visual Results
 
