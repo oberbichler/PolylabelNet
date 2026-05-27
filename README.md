@@ -10,7 +10,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/.NET-10.0-purple.svg" alt=".NET 10.0 ready">
+  <img src="https://img.shields.io/badge/.NET-8.0-purple.svg" alt=".NET 8.0">
+  <img src="https://img.shields.io/badge/.NET-10.0-purple.svg" alt=".NET 10.0">
   <img src="https://img.shields.io/badge/Lizenz-ISC-blue.svg" alt="ISC License">
 </p>
 
@@ -18,7 +19,7 @@
 
 * **Zero Heap Allocations:** All core data structures use stack-allocated value types to eliminate garbage collection pressure.
 * **Peak Performance:** Leverages native priority queues and span slices for ultra-fast execution.
-* **Modern .NET 10 Ready:** Fully optimized to take advantage of the latest RyuJIT compiler and JIT features.
+* **Broad Compatibility:** Targets .NET 8.0 and .NET 10.0 — works in Rhino 8 and other .NET 8 hosts, while also supporting the latest runtime.
 * **Flexible API:** Native support for both high-performance double arrays and standard GeoJSON coordinate structures.
 * **Custom Point Support:** Use your own point/vector class with zero overhead.
 
