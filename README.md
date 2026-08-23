@@ -10,8 +10,8 @@ A fast, allocation-light C# port of [Mapbox Polylabel](https://github.com/mapbox
 
 ## Key Features
 
-* **Allocation-light:** Nothing is allocated per probe; cells, points and results are all value types. The only heap object is the priority queue with its growth buffer — 696 B to 6,144 B per call on the benchmark data below.
-* **Fast:** Roughly 1.5× the throughput of the JavaScript reference on the same fixtures (8.0 ms vs 12.1 ms for `water1`, see [Benchmarks](#benchmarks)).
+* **Allocation-light:** Nothing is allocated per probe; cells, points and results are all value types. The spatial index rents its buffers from `ArrayPool`, so a warm application keeps 816 B to 6,264 B per call on the benchmark data below — essentially just the priority queue.
+* **Fast:** A spatial index over the segments keeps the search from touching the whole outline on every probe — 567 µs for a 5,030 vertex GIS polygon, about 21× the throughput of the JavaScript reference on the same data (see [Benchmarks](#benchmarks)).
 * **Broad Compatibility:** Targets .NET 8.0 and .NET 10.0 — works in Rhino 8 and other .NET 8 hosts, while also supporting the latest runtime.
 * **Flexible Input:** `Point` arrays, GeoJSON-style `double[][][]` coordinates, or your own geometry type via `IPolygon<TPoint>`.
 * **Custom Point Types:** Use your own point/vector **struct** without boxing or virtual dispatch; types you cannot modify (`System.Numerics.Vector2`, Unity's `Vector2`) are covered by a small adapter struct.
@@ -251,38 +251,50 @@ Apple M1 Pro, 1 CPU, 10 logical and 10 physical cores
 
 | Dataset | Polygon | Precision | Mean | Allocated | Resulting Pole |
 | :--- | :--- | :--- | ---: | ---: | :--- |
-| `water1` | 23 rings, 5,030 vertices | `1.0` | 8.023 ms ± 0.158 | 6,144 B | `[3865.85, 2124.88]` (dist 288.85) |
-| `water1` | 23 rings, 5,030 vertices | `50.0` | 5.216 ms ± 0.100 | 3,048 B | `[3854.30, 2123.83]` (dist 278.58) |
-| `water2` | 26 rings, 3,735 vertices | `1.0` | 3.685 ms ± 0.060 | 1,488 B | `[3263.50, 3263.50]` (dist 960.50) |
-| `water2` | 26 rings, 3,735 vertices | `50.0` | 1.854 ms ± 0.033 | 696 B | `[3272.00, 3272.00]` (dist 952.00) |
+| `water1` | 23 rings, 5,030 vertices | `1.0` | 567.3 µs ± 10.7 | 6,264 B | `[3865.85, 2124.88]` (dist 288.85) |
+| `water1` | 23 rings, 5,030 vertices | `50.0` | 432.7 µs ± 5.5 | 3,168 B | `[3854.30, 2123.83]` (dist 278.58) |
+| `water2` | 26 rings, 3,735 vertices | `1.0` | 789.1 µs ± 8.2 | 1,608 B | `[3263.50, 3263.50]` (dist 960.50) |
+| `water2` | 26 rings, 3,735 vertices | `50.0` | 337.2 µs ± 6.5 | 816 B | `[3272.00, 3272.00]` (dist 952.00) |
 
-The allocations are the priority queue object and its growth buffer — nothing is allocated per probe, and the search loop itself causes no GC pressure.
+The allocations are the priority queue and its growth buffer, plus 120 B for the index object; nothing is allocated per probe.
+
+### How the search avoids the outline
+
+A plain implementation measures the distance to every segment of every ring on every probe — for `water1` that is 209 probes over 5,030 segments, more than a million segment visits. Instead the segments are indexed in a uniform grid once per search, which costs about as much as a single probe and cuts the visits to 1–7 %:
+
+| Dataset | Segment visits without index | with index | |
+| :--- | ---: | ---: | ---: |
+| `water1` | 1,046,240 | 40,692 | 3.9 % |
+| `water2` | 500,490 | 36,455 | 7.3 % |
+| 500 holes | 8,461,890 | 109,659 | 1.3 % |
+
+The results are unchanged down to the last bit. A minimum does not depend on the order it is taken in, and the index only leaves out segments that provably cannot beat the best distance found so far; the inside/outside test stays exact because each segment is visited once per query. Polygons below 512 segments skip the index entirely — the linear scan is faster there and needs no memory at all.
 
 ### Comparison with the JavaScript reference
 
 Same fixtures, same precision, [polylabel](https://github.com/mapbox/polylabel) 2.0.1 on Node v26.1.0, same machine:
 
-| Dataset | Precision | This library | polylabel (JS) |
-| :--- | :--- | ---: | ---: |
-| `water1` | `1.0` | 8.0 ms | 12.1 ms |
-| `water1` | `50.0` | 5.2 ms | 7.3 ms |
-| `water2` | `1.0` | 3.7 ms | 5.5 ms |
-| `water2` | `50.0` | 1.9 ms | 2.7 ms |
+| Dataset | Precision | This library | polylabel (JS) | |
+| :--- | :--- | ---: | ---: | ---: |
+| `water1` | `1.0` | 0.567 ms | 12.05 ms | 21× |
+| `water1` | `50.0` | 0.433 ms | 7.19 ms | 17× |
+| `water2` | `1.0` | 0.789 ms | 5.31 ms | 6.7× |
+| `water2` | `50.0` | 0.337 ms | 2.56 ms | 7.6× |
 
-A factor of 1.4 to 1.5. Both implementations run the same algorithm over effectively the same probe sequence, so this is RyuJIT against V8 on identical work, not an algorithmic advantage.
+Both implementations walk the same probe sequence and produce the same poles; the difference is the spatial index, which is why the factor is far larger than the roughly 1.5× that RyuJIT gains over V8 on the identical linear scan.
 
 ### Native PriorityQueue vs Tinyqueue
 
 The library uses the .NET `PriorityQueue`. For comparison, the benchmark project also contains a C# port of the JavaScript `tinyqueue` used by the original:
 
-| Queue | Dataset | Run 1 | Run 2 | Allocated |
-| :--- | :--- | ---: | ---: | ---: |
-| .NET `PriorityQueue` | `water1` | 8.124 ms | 8.023 ms | 6,144 B |
-| Tinyqueue port | `water1` | 8.241 ms | 8.377 ms | 5,144 B |
-| .NET `PriorityQueue` | `water2` | 3.362 ms | 3.685 ms | 1,488 B |
-| Tinyqueue port | `water2` | 3.955 ms | 3.262 ms | 2,560 B |
+| Queue | Dataset | Mean | Allocated |
+| :--- | :--- | ---: | ---: |
+| .NET `PriorityQueue` | `water1` | 567.3 µs | 6,264 B |
+| Tinyqueue port | `water1` | 589.2 µs | 5,264 B |
+| .NET `PriorityQueue` | `water2` | 789.1 µs | 1,608 B |
+| Tinyqueue port | `water2` | 800.6 µs | 2,680 B |
 
-The two are indistinguishable in speed — the ranking on `water2` even flips between runs, so the differences are noise rather than a result. The .NET queue was kept because it is part of the framework.
+The two are indistinguishable in speed; earlier runs even had the ranking on `water2` flip between repetitions. The .NET queue was kept because it is part of the framework.
 
 ### Visual Results
 

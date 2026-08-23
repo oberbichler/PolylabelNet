@@ -159,13 +159,20 @@ public static class PoleOfInaccessibility
             return new PolylabelResult(new Point(bestCell.X, bestCell.Y), bestCell.D);
         }
 
-        // 4. Cover polygon with initial cells
+        // 4. Index the segments, then cover the polygon with initial cells.
+        //
+        // The index is built only now: the two guesses above are a single pass each, and the
+        // coarse precision shortcut above returns without ever running the search, so building
+        // an index for them would cost more than it saves. From here the search issues hundreds
+        // to thousands of queries and the index pays for itself many times over.
+        using SegmentGrid? grid = SegmentGrid.TryBuild<TPolygon, TPoint>(polygon);
+
         double initialH = cellSize / 2.0;
         for (double x = minX; x < maxX; x += cellSize)
         {
             for (double y = minY; y < maxY; y += cellSize)
             {
-                PotentiallyQueue<TPolygon, TPoint, TCellQueue>(x + initialH, y + initialH, initialH, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace);
+                PotentiallyQueue<TPolygon, TPoint, TCellQueue>(x + initialH, y + initialH, initialH, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace, grid);
             }
         }
 
@@ -182,10 +189,10 @@ public static class PoleOfInaccessibility
 
             // Split the cell into four child cells
             double h = cell.H / 2.0;
-            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X - h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace);
-            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X + h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace);
-            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X - h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace);
-            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X + h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X - h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace, grid);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X + h, cell.Y - h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace, grid);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X - h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace, grid);
+            PotentiallyQueue<TPolygon, TPoint, TCellQueue>(cell.X + h, cell.Y + h, h, polygon, ref numProbes, ref bestCell, cellQueue, precision, trace, grid);
         }
 
         if (trace is not null)
@@ -247,12 +254,13 @@ public static class PoleOfInaccessibility
         ref Cell bestCell,
         TCellQueue cellQueue,
         double precision,
-        Action<string>? trace)
+        Action<string>? trace,
+        SegmentGrid? grid)
         where TPolygon : struct, IPolygon<TPoint>
         where TPoint : struct, IPoint
         where TCellQueue : struct, ICellQueue
     {
-        Cell cell = CreateCell<TPolygon, TPoint>(x, y, h, polygon);
+        Cell cell = CreateCell<TPolygon, TPoint>(x, y, h, polygon, grid);
         numProbes++;
         if (cell.Max > bestCell.D + precision)
         {
@@ -268,11 +276,13 @@ public static class PoleOfInaccessibility
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Cell CreateCell<TPolygon, TPoint>(double x, double y, double h, TPolygon polygon)
+    private static Cell CreateCell<TPolygon, TPoint>(double x, double y, double h, TPolygon polygon, SegmentGrid? grid = null)
         where TPolygon : struct, IPolygon<TPoint>
         where TPoint : struct, IPoint
     {
-        double d = PointToPolygonDist<TPolygon, TPoint>(x, y, polygon);
+        double d = grid is null
+            ? PointToPolygonDist<TPolygon, TPoint>(x, y, polygon)
+            : grid.SignedDistance(x, y);
         return new Cell(x, y, h, d);
     }
 
