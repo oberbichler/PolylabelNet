@@ -30,7 +30,11 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # Must cover every TargetFramework in Polylabel.csproj: the net8.0 test host
+          # needs the .NET 8 runtime, otherwise "dotnet test" fails on the runner.
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Restore dependencies
         run: dotnet restore
@@ -49,6 +53,15 @@ jobs:
             -p:Version=${{ github.event.inputs.version }} \
             --output artifacts/
 
+      # The tag is created before publishing on purpose: a failed push can be retried after
+      # deleting the tag, while a package that is already on NuGet.org cannot be taken back.
+      - name: Create and push Git tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}"
+
       - name: Publish to NuGet.org
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
@@ -57,13 +70,6 @@ jobs:
             --api-key "$NUGET_API_KEY" \
             --source "https://api.nuget.org/v3/index.json" \
             --skip-duplicate
-
-      - name: Create and push Git tag
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2

@@ -22,6 +22,9 @@ jobs:
             8.0.x
             10.0.x
 
+      # Mirrors the release workflow, so that a change breaking the release path
+      # (new target framework, packaging error) fails here instead of at release time.
       - run: dotnet restore
-      - run: dotnet build --no-restore
-      - run: dotnet test --no-build
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test --no-build --configuration Release
+      - run: dotnet pack Polylabel/Polylabel.csproj --no-build --configuration Release --output artifacts/
