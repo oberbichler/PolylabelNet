@@ -5,7 +5,10 @@ using System.Globalization;
 using Xunit;
 using Polylabel;
 
-namespace Polylabel.Tests;
+// Deliberately NOT nested inside the "Polylabel" namespace: these tests must resolve
+// names exactly like an external consumer does, so that a namespace/type collision on
+// the public entry point fails the build here instead of only at the consumer's site.
+namespace PolylabelConsumerTests;
 
 public class PolylabelTests
 {
@@ -22,7 +25,7 @@ public class PolylabelTests
     public void FindsPoleOfInaccessibilityForWater1AndPrecision1()
     {
         var water1 = LoadFixture("water1.json");
-        var (point, distance) = Polylabel.Run(water1, 1.0);
+        var (point, distance) = PoleOfInaccessibility.Find(water1, 1.0);
 
         Assert.Equal(3865.85009765625, point.X);
         Assert.Equal(2124.87841796875, point.Y);
@@ -33,7 +36,7 @@ public class PolylabelTests
     public void FindsPoleOfInaccessibilityForWater1AndPrecision50()
     {
         var water1 = LoadFixture("water1.json");
-        var (point, distance) = Polylabel.Run(water1, 50.0);
+        var (point, distance) = PoleOfInaccessibility.Find(water1, 50.0);
 
         Assert.Equal(3854.296875, point.X);
         Assert.Equal(2123.828125, point.Y);
@@ -44,7 +47,7 @@ public class PolylabelTests
     public void FindsPoleOfInaccessibilityForWater2AndDefaultPrecision1()
     {
         var water2 = LoadFixture("water2.json");
-        var (point, distance) = Polylabel.Run(water2, 1.0);
+        var (point, distance) = PoleOfInaccessibility.Find(water2, 1.0);
 
         Assert.Equal(3263.5, point.X);
         Assert.Equal(3263.5, point.Y);
@@ -56,7 +59,7 @@ public class PolylabelTests
     {
         var p1Coords = new double[][][] { new double[][] { new double[] { 0, 0 }, new double[] { 1, 0 }, new double[] { 2, 0 }, new double[] { 0, 0 } } };
         var polygon1 = new Polygon(p1Coords);
-        var (point1, distance1) = Polylabel.Run(polygon1);
+        var (point1, distance1) = PoleOfInaccessibility.Find(polygon1);
 
         Assert.Equal(0, point1.X);
         Assert.Equal(0, point1.Y);
@@ -64,7 +67,7 @@ public class PolylabelTests
 
         var p2Coords = new double[][][] { new double[][] { new double[] { 0, 0 }, new double[] { 1, 0 }, new double[] { 1, 1 }, new double[] { 1, 0 }, new double[] { 0, 0 } } };
         var polygon2 = new Polygon(p2Coords);
-        var (point2, distance2) = Polylabel.Run(polygon2);
+        var (point2, distance2) = PoleOfInaccessibility.Find(polygon2);
 
         Assert.Equal(0, point2.X);
         Assert.Equal(0, point2.Y);
@@ -75,7 +78,7 @@ public class PolylabelTests
     public void ReturnsZeroForDefaultPolygonStruct()
     {
         Polygon polygon = default;
-        var (point, distance) = Polylabel.Run(polygon);
+        var (point, distance) = PoleOfInaccessibility.Find(polygon);
 
         Assert.Equal(0, point.X);
         Assert.Equal(0, point.Y);
@@ -86,7 +89,7 @@ public class PolylabelTests
     public void ReturnsZeroForDefaultGenericPolygonStruct()
     {
         Polygon<Point> polygon = default;
-        var (point, distance) = Polylabel.Run(polygon);
+        var (point, distance) = PoleOfInaccessibility.Find(polygon);
 
         Assert.Equal(0, point.X);
         Assert.Equal(0, point.Y);
@@ -97,7 +100,7 @@ public class PolylabelTests
     public void ReturnsZeroForEmptyPolygon()
     {
         var polygon = new Polygon(Array.Empty<Point[]>());
-        var (point, distance) = Polylabel.Run(polygon);
+        var (point, distance) = PoleOfInaccessibility.Find(polygon);
 
         Assert.Equal(0, point.X);
         Assert.Equal(0, point.Y);
@@ -108,7 +111,7 @@ public class PolylabelTests
     public void ReturnsZeroForPolygonWithEmptyOuterRing()
     {
         var polygon = new Polygon(new Point[][] { Array.Empty<Point>() });
-        var (point, distance) = Polylabel.Run(polygon);
+        var (point, distance) = PoleOfInaccessibility.Find(polygon);
 
         Assert.Equal(0, point.X);
         Assert.Equal(0, point.Y);
@@ -120,7 +123,7 @@ public class PolylabelTests
     {
         var coords = new double[][][] { new double[][] { new double[] { 5, 7 } } };
         var polygon = new Polygon(coords);
-        var (point, distance) = Polylabel.Run(polygon);
+        var (point, distance) = PoleOfInaccessibility.Find(polygon);
 
         Assert.Equal(5, point.X);
         Assert.Equal(7, point.Y);
@@ -158,7 +161,7 @@ public class PolylabelTests
         };
 
         var polygon = new Polygon<CustomVector2>(rings);
-        var (point, distance) = Polylabel.Run(polygon, 1.0);
+        var (point, distance) = PoleOfInaccessibility.Find(polygon, 1.0);
 
         Assert.Equal(5.0, point.X);
         Assert.Equal(5.0, point.Y);
@@ -194,7 +197,7 @@ public class PolylabelTests
             ring => Array.ConvertAll(ring, v => new Vector2Adapter(v)));
 
         var polygon = new Polygon<Vector2Adapter>(wrappedRings);
-        var (point, distance) = Polylabel.Run(polygon, 1.0);
+        var (point, distance) = PoleOfInaccessibility.Find(polygon, 1.0);
 
         Assert.Equal(5.0, point.X);
         Assert.Equal(5.0, point.Y);
@@ -225,7 +228,7 @@ public class PolylabelTests
         };
 
         var polygon = new CustomPolygon(outerRing);
-        var (point, distance) = Polylabel.Run<CustomPolygon, Point>(polygon, 1.0);
+        var (point, distance) = PoleOfInaccessibility.Find<CustomPolygon, Point>(polygon, 1.0);
 
         Assert.Equal(5.0, point.X);
         Assert.Equal(5.0, point.Y);

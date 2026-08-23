@@ -31,7 +31,7 @@ public class PolylabelBenchmarks
     [Benchmark(Baseline = true)]
     public PolylabelResult NativeQueue_Water1_Precision1()
     {
-        return Polylabel.Run(_water1, 1.0);
+        return PoleOfInaccessibility.Find(_water1, 1.0);
     }
 
     [Benchmark]
@@ -41,9 +41,21 @@ public class PolylabelBenchmarks
     }
 
     [Benchmark]
+    public PolylabelResult NativeQueue_Water1_Precision50()
+    {
+        return PoleOfInaccessibility.Find(_water1, 50.0);
+    }
+
+    [Benchmark]
     public PolylabelResult NativeQueue_Water2_Precision1()
     {
-        return Polylabel.Run(_water2, 1.0);
+        return PoleOfInaccessibility.Find(_water2, 1.0);
+    }
+
+    [Benchmark]
+    public PolylabelResult NativeQueue_Water2_Precision50()
+    {
+        return PoleOfInaccessibility.Find(_water2, 50.0);
     }
 
     [Benchmark]

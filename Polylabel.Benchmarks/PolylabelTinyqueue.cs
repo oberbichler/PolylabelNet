@@ -27,8 +27,8 @@ internal readonly struct TinyCellQueue : ICellQueue
 
 public static class PolylabelTinyqueue
 {
-    public static PolylabelResult Run(Polygon polygon, double precision = 1.0, bool debug = false)
+    public static PolylabelResult Run(Polygon polygon, double precision = 1.0, Action<string>? trace = null)
     {
-        return Polylabel.RunCore<Polygon, Point, TinyCellQueue>(polygon, new TinyCellQueue(), precision, debug);
+        return PoleOfInaccessibility.FindCore<Polygon, Point, TinyCellQueue>(polygon, new TinyCellQueue(), precision, trace);
     }
 }
